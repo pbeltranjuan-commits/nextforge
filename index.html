@@ -1,0 +1,1488 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PromptForge AI — Gestión de Prompts Enterprise</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.18/index.min.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        brand: {
+                            50: '#eef2ff', 100: '#e0e7ff', 200: '#c7d2fe', 300: '#a5b4fc',
+                            400: '#818cf8', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca',
+                            800: '#3730a3', 900: '#312e81', 950: '#1e1b4b'
+                        },
+                        surface: {
+                            50: '#f8fafc', 100: '#f1f5f9', 200: '#e2e8f0', 300: '#cbd5e1',
+                            400: '#94a3b8', 500: '#64748b', 600: '#475569', 700: '#334155',
+                            800: '#1e293b', 900: '#0f172a', 950: '#020617'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        * { scrollbar-width: thin; scrollbar-color: #334155 #0f172a; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+        .fade-in { animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .slide-in { animation: slideIn 0.3s ease-out; }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(-12px); } to { opacity: 1; transform: translateX(0); } }
+        .pulse-glow { animation: pulseGlow 2s ease-in-out infinite; }
+        @keyframes pulseGlow { 0%, 100% { box-shadow: 0 0 5px rgba(99,102,241,0.3); } 50% { box-shadow: 0 0 20px rgba(99,102,241,0.6); } }
+        .gradient-text { background: linear-gradient(135deg, #818cf8, #6366f1, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .glass { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(51, 65, 85, 0.5); }
+        .code-font { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+        .btn-primary { background: linear-gradient(135deg, #6366f1, #4f46e5); transition: all 0.2s; }
+        .btn-primary:hover { background: linear-gradient(135deg, #818cf8, #6366f1); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(99,102,241,0.4); }
+        .sidebar-link.active { background: rgba(99,102,241,0.15); border-right: 3px solid #6366f1; color: #a5b4fc; }
+        .tab-active { background: rgba(99,102,241,0.15); color: #a5b4fc; border-bottom: 2px solid #6366f1; }
+        .metric-card { transition: all 0.3s; }
+        .metric-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.3); }
+        input:focus, textarea:focus, select:focus { outline: none; box-shadow: 0 0 0 2px rgba(99,102,241,0.5); }
+        .copy-tooltip { position: fixed; top: 20px; right: 20px; z-index: 9999; }
+        .toast { animation: toastIn 0.3s ease-out, toastOut 0.3s ease-in 2.7s forwards; }
+        @keyframes toastIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes toastOut { from { opacity: 1; } to { opacity: 0; transform: translateY(-10px); } }
+        .mobile-menu { transform: translateX(-100%); transition: transform 0.3s ease; }
+        .mobile-menu.open { transform: translateX(0); }
+        @media (max-width: 768px) {
+            aside { transform: translateX(-100%); }
+            aside.open { transform: translateX(0); }
+            main { margin-left: 0 !important; }
+        }
+    </style>
+</head>
+<body class="bg-surface-950 text-surface-200 font-sans min-h-screen">
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="copy-tooltip"></div>
+
+    <!-- Mobile Header -->
+    <div class="md:hidden fixed top-0 left-0 right-0 z-50 glass border-b border-surface-800 px-4 py-3 flex items-center justify-between">
+        <button onclick="document.querySelector('aside').classList.add('open')" class="p-2 rounded-lg hover:bg-surface-800">
+            <svg class="w-6 h-6 text-surface-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            </div>
+            <span class="font-bold text-white">PromptForge</span>
+        </div>
+        <div class="w-10"></div>
+    </div>
+
+    <!-- Sidebar -->
+    <aside class="fixed left-0 top-0 h-full w-64 bg-surface-900 border-r border-surface-800 z-50 flex flex-col transition-transform duration-300 md:translate-x-0 -translate-x-full" id="sidebar">
+        <!-- Logo -->
+        <div class="p-6 border-b border-surface-800 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center shadow-lg">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-white tracking-tight">PromptForge</h1>
+                    <span class="text-xs text-brand-400 font-medium">AI Platform</span>
+                </div>
+            </div>
+            <button onclick="document.querySelector('aside').classList.remove('open')" class="md:hidden p-1 rounded hover:bg-surface-800">
+                <svg class="w-5 h-5 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="flex-1 py-4 overflow-y-auto">
+            <div class="px-4 mb-2 text-xs font-semibold text-surface-500 uppercase tracking-wider">Principal</div>
+            <a href="#" class="sidebar-link active flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg text-sm transition-all hover:bg-surface-800" data-page="dashboard" onclick="switchPage('dashboard', this)">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+                Dashboard
+            </a>
+            <a href="#" class="sidebar-link flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg text-sm text-surface-400 transition-all hover:bg-surface-800 hover:text-surface-200" data-page="prompts" onclick="switchPage('prompts', this)">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                Editor de Prompts
+            </a>
+            <a href="#" class="sidebar-link flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg text-sm text-surface-400 transition-all hover:bg-surface-800 hover:text-surface-200" data-page="apigenerator" onclick="switchPage('apigenerator', this)">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+                Generador API
+            </a>
+            <a href="#" class="sidebar-link flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg text-sm text-surface-400 transition-all hover:bg-surface-800 hover:text-surface-200" data-page="models" onclick="switchPage('models', this)">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                Modelos & BYOK
+            </a>
+
+            <div class="px-4 mt-6 mb-2 text-xs font-semibold text-surface-500 uppercase tracking-wider">Gestión</div>
+            <a href="#" class="sidebar-link flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg text-sm text-surface-400 transition-all hover:bg-surface-800 hover:text-surface-200" data-page="analytics" onclick="switchPage('analytics', this)">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                Analíticas
+            </a>
+            <a href="#" class="sidebar-link flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg text-sm text-surface-400 transition-all hover:bg-surface-800 hover:text-surface-200" data-page="team" onclick="switchPage('team', this)">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                Equipo
+            </a>
+            <a href="#" class="sidebar-link flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg text-sm text-surface-400 transition-all hover:bg-surface-800 hover:text-surface-200" data-page="settings" onclick="switchPage('settings', this)">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                Configuración
+            </a>
+        </nav>
+
+        <!-- Plan Badge -->
+        <div class="p-4 border-t border-surface-800">
+            <div class="bg-gradient-to-r from-brand-900/50 to-brand-800/30 rounded-xl p-4 border border-brand-700/30">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm font-semibold text-brand-300">Plan Pro</span>
+                    <span class="text-lg font-bold text-white">20€/mes</span>
+                </div>
+                <p class="text-xs text-surface-400 mb-3">BYOK • API ilimitada • 10K req/mes</p>
+                <div class="w-full bg-surface-700 rounded-full h-1.5 mb-1">
+                    <div class="bg-brand-500 h-1.5 rounded-full" style="width: 35%"></div>
+                </div>
+                <span class="text-xs text-surface-500">3,487 / 10,000 requests</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="md:ml-64 min-h-screen pt-14 md:pt-0">
+        <!-- Top Bar -->
+        <header class="sticky top-14 md:top-0 z-40 glass border-b border-surface-800 hidden md:block">
+            <div class="flex items-center justify-between px-8 py-4">
+                <div class="flex items-center gap-4">
+                    <h2 id="pageTitle" class="text-xl font-bold text-white">Dashboard</h2>
+                    <span class="px-2.5 py-0.5 bg-emerald-500/10 text-emerald-400 text-xs font-medium rounded-full border border-emerald-500/20">● Activo</span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="relative">
+                        <input type="text" placeholder="Buscar prompts, modelos..." class="w-64 bg-surface-800 border border-surface-700 rounded-lg px-4 py-2 text-sm text-surface-200 placeholder-surface-500 focus:border-brand-500 transition-all">
+                        <svg class="w-4 h-4 absolute right-3 top-2.5 text-surface-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    </div>
+                    <button class="relative p-2 rounded-lg hover:bg-surface-800 transition-all">
+                        <svg class="w-5 h-5 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                        <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
+                    </button>
+                    <div class="flex items-center gap-3 pl-4 border-l border-surface-700">
+                        <div class="w-9 h-9 rounded-full bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center text-sm font-bold text-white">JD</div>
+                        <div>
+                            <p class="text-sm font-medium text-white">Juan Díaz</p>
+                            <p class="text-xs text-surface-500">Admin</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dashboard Page -->
+        <div id="page-dashboard" class="page-content p-4 md:p-8 fade-in">
+            <!-- Metrics -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
+                <div class="metric-card bg-surface-900 border border-surface-800 rounded-2xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-10 h-10 rounded-xl bg-brand-500/10 flex items-center justify-center">
+                            <svg class="w-5 h-5 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+                        </div>
+                        <span class="text-xs font-medium text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-full">+12.5%</span>
+                    </div>
+                    <h3 class="text-2xl font-bold text-white mb-1">24</h3>
+                    <p class="text-sm text-surface-500">Prompts Activos</p>
+                </div>
+                <div class="metric-card bg-surface-900 border border-surface-800 rounded-2xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                            <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                        </div>
+                        <span class="text-xs font-medium text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-full">+8.3%</span>
+                    </div>
+                    <h3 class="text-2xl font-bold text-white mb-1">3,487</h3>
+                    <p class="text-sm text-surface-500">Requests Hoy</p>
+                </div>
+                <div class="metric-card bg-surface-900 border border-surface-800 rounded-2xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                            <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </div>
+                        <span class="text-xs font-medium text-red-400 bg-red-500/10 px-2 py-1 rounded-full">+2.1%</span>
+                    </div>
+                    <h3 class="text-2xl font-bold text-white mb-1">€12.40</h3>
+                    <p class="text-sm text-surface-500">Costo Estimado</p>
+                </div>
+                <div class="metric-card bg-surface-900 border border-surface-800 rounded-2xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                            <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                        </div>
+                        <span class="text-xs font-medium text-surface-400">99.9%</span>
+                    </div>
+                    <h3 class="text-2xl font-bold text-white mb-1">142ms</h3>
+                    <p class="text-sm text-surface-500">Latencia Media</p>
+                </div>
+            </div>
+
+            <!-- Charts & Activity -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                <div class="col-span-1 lg:col-span-2 bg-surface-900 border border-surface-800 rounded-2xl p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-lg font-semibold text-white">Consumo de Tokens</h3>
+                        <div class="flex gap-2">
+                            <button class="px-3 py-1 text-xs bg-brand-600 text-white rounded-lg">7D</button>
+                            <button class="px-3 py-1 text-xs bg-surface-800 text-surface-400 rounded-lg hover:bg-surface-700">30D</button>
+                            <button class="px-3 py-1 text-xs bg-surface-800 text-surface-400 rounded-lg hover:bg-surface-700">90D</button>
+                        </div>
+                    </div>
+                    <canvas id="tokensChart" height="200"></canvas>
+                </div>
+                <div class="bg-surface-900 border border-surface-800 rounded-2xl p-6">
+                    <h3 class="text-lg font-semibold text-white mb-4">Uso por Modelo</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span class="text-sm text-surface-300">GPT-4 Turbo</span>
+                                <span class="text-sm text-surface-500">45%</span>
+                            </div>
+                            <div class="w-full bg-surface-800 rounded-full h-2">
+                                <div class="bg-gradient-to-r from-brand-500 to-brand-400 h-2 rounded-full" style="width: 45%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span class="text-sm text-surface-300">Claude 3.5</span>
+                                <span class="text-sm text-surface-500">30%</span>
+                            </div>
+                            <div class="w-full bg-surface-800 rounded-full h-2">
+                                <div class="bg-gradient-to-r from-amber-500 to-amber-400 h-2 rounded-full" style="width: 30%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span class="text-sm text-surface-300">Llama 3.1</span>
+                                <span class="text-sm text-surface-500">15%</span>
+                            </div>
+                            <div class="w-full bg-surface-800 rounded-full h-2">
+                                <div class="bg-gradient-to-r from-emerald-500 to-emerald-400 h-2 rounded-full" style="width: 15%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span class="text-sm text-surface-300">Mistral Large</span>
+                                <span class="text-sm text-surface-500">10%</span>
+                            </div>
+                            <div class="w-full bg-surface-800 rounded-full h-2">
+                                <div class="bg-gradient-to-r from-purple-500 to-purple-400 h-2 rounded-full" style="width: 10%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="bg-surface-900 border border-surface-800 rounded-2xl p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-white">Actividad Reciente</h3>
+                    <button class="text-sm text-brand-400 hover:text-brand-300">Ver todo →</button>
+                </div>
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between py-3 border-b border-surface-800">
+                        <div class="flex items-center gap-3">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                            <span class="text-sm text-surface-200">Prompt <span class="font-mono text-brand-400">soporte-respuestas</span> actualizado</span>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <span class="text-xs text-surface-500">GPT-4 Turbo</span>
+                            <span class="text-xs text-surface-500">hace 2 min</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between py-3 border-b border-surface-800">
+                        <div class="flex items-center gap-3">
+                            <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                            <span class="text-sm text-surface-200">API Key <span class="font-mono text-amber-400">sk-***4f2a</span> rotada</span>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <span class="text-xs text-surface-500">Admin</span>
+                            <span class="text-xs text-surface-500">hace 15 min</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between py-3 border-b border-surface-800">
+                        <div class="flex items-center gap-3">
+                            <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                            <span class="text-sm text-surface-200">Nuevo endpoint generado: <span class="font-mono text-blue-400">/api/v1/analizar</span></span>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <span class="text-xs text-surface-500">Juan Díaz</span>
+                            <span class="text-xs text-surface-500">hace 1h</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between py-3">
+                        <div class="flex items-center gap-3">
+                            <span class="w-2 h-2 rounded-full bg-purple-500"></span>
+                            <span class="text-sm text-surface-200">Modelo <span class="font-mono text-purple-400">claude-3.5-sonnet</span> añadido</span>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <span class="text-xs text-surface-500">BYOK</span>
+                            <span class="text-xs text-surface-500">hace 3h</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Prompts Page -->
+        <div id="page-prompts" class="page-content p-4 md:p-8 hidden fade-in">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h2 class="text-xl font-bold text-white">Biblioteca de Prompts</h2>
+                    <p class="text-sm text-surface-500 mt-1">Gestiona, versiona y optimiza tus prompts</p>
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="openNewPromptModal()" class="btn-primary px-4 py-2 rounded-lg text-sm font-medium text-white flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                        Nuevo Prompt
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="flex flex-wrap items-center gap-3 mb-6">
+                <div class="flex bg-surface-900 border border-surface-800 rounded-lg p-1">
+                    <button class="px-3 py-1.5 text-xs font-medium bg-brand-600 text-white rounded-md">Todos</button>
+                    <button class="px-3 py-1.5 text-xs font-medium text-surface-400 hover:text-surface-200 rounded-md">Soporte</button>
+                    <button class="px-3 py-1.5 text-xs font-medium text-surface-400 hover:text-surface-200 rounded-md">Ventas</button>
+                    <button class="px-3 py-1.5 text-xs font-medium text-surface-400 hover:text-surface-200 rounded-md">Legal</button>
+                    <button class="px-3 py-1.5 text-xs font-medium text-surface-400 hover:text-surface-200 rounded-md">Marketing</button>
+                </div>
+                <div class="relative flex-1 max-w-xs">
+                    <input type="text" placeholder="Buscar..." class="w-full bg-surface-900 border border-surface-800 rounded-lg px-4 py-2 text-sm text-surface-200 placeholder-surface-500 focus:border-brand-500">
+                    <svg class="w-4 h-4 absolute right-3 top-2.5 text-surface-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                </div>
+                <select class="bg-surface-900 border border-surface-800 rounded-lg px-3 py-2 text-sm text-surface-300">
+                    <option>Más recientes</option>
+                    <option>Más usados</option>
+                    <option>Nombre A-Z</option>
+                </select>
+            </div>
+
+            <!-- Prompt Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="promptCards">
+                <!-- Card 1 -->
+                <div class="bg-surface-900 border border-surface-800 rounded-2xl p-6 hover:border-brand-500/30 transition-all cursor-pointer group" onclick="openPromptEditor('soporte-respuestas')">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-white group-hover:text-brand-400 transition-all">soporte-respuestas</h3>
+                                <span class="text-xs text-surface-500">Soporte al Cliente</span>
+                            </div>
+                        </div>
+                        <span class="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 text-xs rounded-full border border-emerald-500/20">v3.2</span>
+                    </div>
+                    <p class="text-sm text-surface-400 mb-4 line-clamp-2">Genera respuestas empáticas y profesionales para tickets de soporte. Usa contexto del cliente y historial previo.</p>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3 text-xs text-surface-500">
+                            <span class="flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg> 1,247 req</span>
+                            <span class="flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> 234ms</span>
+                        </div>
+                        <span class="text-xs text-brand-400 opacity-0 group-hover:opacity-100 transition-all">Editar →</span>
+                    </div>
+                </div>
+
+                <!-- Card 2 -->
+                <div class="bg-surface-900 border border-surface-800 rounded-2xl p-6 hover:border-brand-500/30 transition-all cursor-pointer group" onclick="openPromptEditor('analizar-sentimiento')">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-white group-hover:text-brand-400 transition-all">analizar-sentimiento</h3>
+                                <span class="text-xs text-surface-500">Análisis de Datos</span>
+                            </div>
+                        </div>
+                        <span class="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 text-xs rounded-full border border-emerald-500/20">v2.0</span>
+                    </div>
+                    <p class="text-sm text-surface-400 mb-4 line-clamp-2">Analiza el sentimiento de reseñas y feedback de clientes. Retorna score de -1 a 1 con categorías.</p>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3 text-xs text-surface-500">
+                            <span class="flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg> 856 req</span>
+                            <span class="flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> 156ms</span>
+                        </div>
+                        <span class="text-xs text-brand-400 opacity-0 group-hover:opacity-100 transition-all">Editar →</span>
+                    </div>
+                </div>
+
+                <!-- Card 3 -->
+                <div class="bg-surface-900 border border-surface-800 rounded-2xl p-6 hover:border-brand-500/30 transition-all cursor-pointer group" onclick="openPromptEditor('generar-email')">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-white group-hover:text-brand-400 transition-all">generar-email</h3>
+                                <span class="text-xs text-surface-500">Marketing</span>
+                            </div>
+                        </div>
+                        <span class="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 text-xs rounded-full border border-emerald-500/20">v5.1</span>
+                    </div>
+                    <p class="text-sm text-surface-400 mb-4 line-clamp-2">Genera emails de outreach personalizados según industria, rol del prospecto y pain points identificados.</p>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3 text-xs text-surface-500">
+                            <span class="flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg> 2,103 req</span>
+                            <span class="flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> 312ms</span>
+                        </div>
+                        <span class="text-xs text-brand-400 opacity-0 group-hover:opacity-100 transition-all">Editar →</span>
+                    </div>
+                </div>
+
+                <!-- Card 4 -->
+                <div class="bg-surface-900 border border-surface-800 rounded-2xl p-6 hover:border-brand-500/30 transition-all cursor-pointer group" onclick="openPromptEditor('resumir-documento')">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-white group-hover:text-brand-400 transition-all">resumir-documento</h3>
+                                <span class="text-xs text-surface-500">Legal & Compliance</span>
+                            </div>
+                        </div>
+                        <span class="px-2 py-0.5 bg-amber-500/10 text-amber-400 text-xs rounded-full border border-amber-500/20">v1.8</span>
+                    </div>
+                    <p class="text-sm text-surface-400 mb-4 line-clamp-2">Resume contratos y documentos legales extrayendo cláusulas clave, riesgos y obligaciones principales.</p>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3 text-xs text-surface-500">
+                            <span class="flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg> 432 req</span>
+                            <span class="flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> 489ms</span>
+                        </div>
+                        <span class="text-xs text-brand-400 opacity-0 group-hover:opacity-100 transition-all">Editar →</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Prompt Editor Modal -->
+        <div id="promptEditorModal" class="fixed inset-0 z-50 hidden">
+            <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closePromptEditor()"></div>
+            <div class="absolute inset-2 md:inset-4 bg-surface-900 border border-surface-700 rounded-2xl flex flex-col md:flex-row overflow-hidden slide-in">
+                <!-- Editor Left -->
+                <div class="flex-1 flex flex-col min-h-0">
+                    <div class="flex items-center justify-between p-4 border-b border-surface-800 flex-shrink-0">
+                        <div class="flex items-center gap-3">
+                            <input type="text" value="soporte-respuestas" class="bg-transparent text-lg font-bold text-white focus:outline-none w-48 md:w-64" id="editorTitle">
+                            <span class="px-2 py-0.5 bg-brand-500/10 text-brand-400 text-xs rounded-full">v3.2</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <select class="hidden md:block bg-surface-800 border border-surface-700 rounded-lg px-3 py-1.5 text-sm text-surface-300">
+                                <option>GPT-4 Turbo</option>
+                                <option>Claude 3.5 Sonnet</option>
+                                <option>Llama 3.1 70B</option>
+                                <option>Mistral Large</option>
+                            </select>
+                            <button onclick="testPrompt()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-sm rounded-lg flex items-center gap-1 transition-all">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                <span class="hidden sm:inline">Test</span>
+                            </button>
+                            <button onclick="savePrompt()" class="btn-primary px-3 py-1.5 text-white text-sm rounded-lg">Guardar</button>
+                        </div>
+                    </div>
+
+                    <!-- System Prompt -->
+                    <div class="flex-1 p-4 space-y-4 overflow-y-auto">
+                        <div>
+                            <label class="text-sm font-medium text-surface-300 mb-2 block">System Prompt</label>
+                            <textarea id="systemPrompt" class="w-full h-40 md:h-48 bg-surface-950 border border-surface-700 rounded-xl p-4 text-sm text-surface-200 code-font resize-none focus:border-brand-500" placeholder="Escribe el system prompt aquí...">Eres un asistente de soporte técnico especializado para {{empresa}}. Tu objetivo es:
+1. Ser empático y profesional
+2. Resolver problemas de forma clara y concisa
+3. Usar el historial del cliente: {{historial_cliente}}
+4. Ofrecer soluciones paso a paso
+5. Escalar a un humano si el problema es complejo
+
+Tono: {{tono}}
+Idioma: {{idioma}}</textarea>
+                        </div>
+
+                        <!-- Variables -->
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <label class="text-sm font-medium text-surface-300">Variables</label>
+                                <button onclick="addVariable()" class="text-xs text-brand-400 hover:text-brand-300">+ Añadir variable</button>
+                            </div>
+                            <div class="space-y-2" id="variablesList">
+                                <div class="flex items-center gap-2">
+                                    <input type="text" value="empresa" class="w-28 md:w-32 bg-surface-950 border border-surface-700 rounded-lg px-3 py-1.5 text-sm text-surface-200 code-font focus:border-brand-500">
+                                    <input type="text" value="TechCorp Solutions" class="flex-1 bg-surface-950 border border-surface-700 rounded-lg px-3 py-1.5 text-sm text-surface-200 focus:border-brand-500" placeholder="Valor por defecto">
+                                    <select class="bg-surface-800 border border-surface-700 rounded-lg px-2 py-1.5 text-xs text-surface-400 hidden sm:block">
+                                        <option>string</option>
+                                        <option>number</option>
+                                        <option>boolean</option>
+                                        <option>enum</option>
+                                    </select>
+                                    <button class="p-1 hover:bg-surface-800 rounded transition-all"><svg class="w-4 h-4 text-surface-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <input type="text" value="historial_cliente" class="w-28 md:w-32 bg-surface-950 border border-surface-700 rounded-lg px-3 py-1.5 text-sm text-surface-200 code-font focus:border-brand-500">
+                                    <input type="text" value="[]" class="flex-1 bg-surface-950 border border-surface-700 rounded-lg px-3 py-1.5 text-sm text-surface-200 focus:border-brand-500" placeholder="Valor por defecto">
+                                    <select class="bg-surface-800 border border-surface-700 rounded-lg px-2 py-1.5 text-xs text-surface-400 hidden sm:block">
+                                        <option>array</option>
+                                        <option>string</option>
+                                        <option>number</option>
+                                    </select>
+                                    <button class="p-1 hover:bg-surface-800 rounded transition-all"><svg class="w-4 h-4 text-surface-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <input type="text" value="tono" class="w-28 md:w-32 bg-surface-950 border border-surface-700 rounded-lg px-3 py-1.5 text-sm text-surface-200 code-font focus:border-brand-500">
+                                    <input type="text" value="profesional" class="flex-1 bg-surface-950 border border-surface-700 rounded-lg px-3 py-1.5 text-sm text-surface-200 focus:border-brand-500" placeholder="Valor por defecto">
+                                    <select class="bg-surface-800 border border-surface-700 rounded-lg px-2 py-1.5 text-xs text-surface-400 hidden sm:block">
+                                        <option>enum</option>
+                                        <option>string</option>
+                                    </select>
+                                    <button class="p-1 hover:bg-surface-800 rounded transition-all"><svg class="w-4 h-4 text-surface-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- User Input -->
+                        <div>
+                            <label class="text-sm font-medium text-surface-300 mb-2 block">User Input Template</label>
+                            <textarea class="w-full h-20 bg-surface-950 border border-surface-700 rounded-xl p-4 text-sm text-surface-200 code-font resize-none focus:border-brand-500" placeholder="Template del input del usuario...">El cliente reporta el siguiente problema:
+{{problema}}
+
+Dispositivo: {{dispositivo}}
+Plan: {{plan}}</textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Preview Right -->
+                <div class="w-full md:w-96 border-l border-surface-800 flex flex-col max-h-[40vh] md:max-h-full flex-shrink-0">
+                    <div class="p-4 border-b border-surface-800 flex-shrink-0">
+                        <h3 class="text-sm font-semibold text-white">Preview & Test</h3>
+                    </div>
+                    <div class="flex-1 p-4 space-y-3 overflow-y-auto">
+                        <div>
+                            <label class="text-xs text-surface-500 mb-1 block">empresa</label>
+                            <input type="text" value="TechCorp Solutions" class="w-full bg-surface-950 border border-surface-700 rounded-lg px-3 py-1.5 text-sm text-surface-200 focus:border-brand-500">
+                        </div>
+                        <div>
+                            <label class="text-xs text-surface-500 mb-1 block">problema</label>
+                            <textarea class="w-full h-16 bg-surface-950 border border-surface-700 rounded-lg px-3 py-2 text-sm text-surface-200 focus:border-brand-500 resize-none">No puedo acceder a mi dashboard desde esta mañana. Me sale error 503.</textarea>
+                        </div>
+                        <div>
+                            <label class="text-xs text-surface-500 mb-1 block">dispositivo</label>
+                            <input type="text" value="MacBook Pro M2" class="w-full bg-surface-950 border border-surface-700 rounded-lg px-3 py-1.5 text-sm text-surface-200 focus:border-brand-500">
+                        </div>
+                        <div>
+                            <label class="text-xs text-surface-500 mb-1 block">plan</label>
+                            <input type="text" value="Enterprise" class="w-full bg-surface-950 border border-surface-700 rounded-lg px-3 py-1.5 text-sm text-surface-200 focus:border-brand-500">
+                        </div>
+
+                        <!-- Result -->
+                        <div id="testResult" class="mt-4 p-4 bg-surface-950 border border-surface-700 rounded-xl hidden">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-medium text-emerald-400">✓ Resultado</span>
+                                <span class="text-xs text-surface-500">234ms • 456 tokens</span>
+                            </div>
+                            <p class="text-sm text-surface-200 leading-relaxed">Lamento escuchar que tienes problemas para acceder. El error 503 indica que nuestro servicio está temporalmente indisponible. Déjame verificar el estado actual...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- API Generator Page -->
+        <div id="page-apigenerator" class="page-content p-4 md:p-8 hidden fade-in">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h2 class="text-xl font-bold text-white">Generador de API</h2>
+                    <p class="text-sm text-surface-500 mt-1">Genera endpoints listos para producción desde tus prompts</p>
+                </div>
+            </div>
+
+            <!-- API Config -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                <div class="col-span-1 lg:col-span-2 bg-surface-900 border border-surface-800 rounded-2xl p-6">
+                    <h3 class="text-lg font-semibold text-white mb-4">Configuración del Endpoint</h3>
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="text-sm text-surface-400 mb-1 block">Nombre del Endpoint</label>
+                                <input type="text" value="analizar-sentimiento" class="w-full bg-surface-950 border border-surface-700 rounded-lg px-4 py-2.5 text-sm text-surface-200 code-font focus:border-brand-500" id="apiName">
+                            </div>
+                            <div>
+                                <label class="text-sm text-surface-400 mb-1 block">Método</label>
+                                <select class="w-full bg-surface-950 border border-surface-700 rounded-lg px-4 py-2.5 text-sm text-surface-200 focus:border-brand-500">
+                                    <option>POST</option>
+                                    <option>GET</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-sm text-surface-400 mb-1 block">Prompt Asociado</label>
+                            <select class="w-full bg-surface-950 border border-surface-700 rounded-lg px-4 py-2.5 text-sm text-surface-200 focus:border-brand-500" id="apiPromptSelect">
+                                <option>soporte-respuestas (v3.2)</option>
+                                <option>analizar-sentimiento (v2.0)</option>
+                                <option selected>generar-email (v5.1)</option>
+                                <option>resumir-documento (v1.8)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-sm text-surface-400 mb-1 block">Modelo por Defecto</label>
+                            <select class="w-full bg-surface-950 border border-surface-700 rounded-lg px-4 py-2.5 text-sm text-surface-200 focus:border-brand-500">
+                                <option>GPT-4 Turbo</option>
+                                <option selected>Claude 3.5 Sonnet</option>
+                                <option>Llama 3.1 70B</option>
+                            </select>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-4 pt-2">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" checked class="w-4 h-4 rounded border-surface-600 bg-surface-800 text-brand-500 focus:ring-brand-500">
+                                <span class="text-sm text-surface-300">Rate Limiting</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" checked class="w-4 h-4 rounded border-surface-600 bg-surface-800 text-brand-500 focus:ring-brand-500">
+                                <span class="text-sm text-surface-300">Logging</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" class="w-4 h-4 rounded border-surface-600 bg-surface-800 text-brand-500 focus:ring-brand-500">
+                                <span class="text-sm text-surface-300">Cache</span>
+                            </label>
+                        </div>
+                        <button onclick="generateAPI()" class="btn-primary w-full py-2.5 rounded-lg text-sm font-medium text-white mt-2">
+                            Generar Código API
+                        </button>
+                    </div>
+                </div>
+
+                <!-- API Stats -->
+                <div class="bg-surface-900 border border-surface-800 rounded-2xl p-6">
+                    <h3 class="text-lg font-semibold text-white mb-4">Endpoints Activos</h3>
+                    <div class="space-y-3 mb-6">
+                        <div class="flex items-center justify-between p-3 bg-surface-950 rounded-lg">
+                            <div>
+                                <p class="text-sm font-mono text-brand-400">/api/v1/soporte</p>
+                                <p class="text-xs text-surface-500">POST • 1,247 req</p>
+                            </div>
+                            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        </div>
+                        <div class="flex items-center justify-between p-3 bg-surface-950 rounded-lg">
+                            <div>
+                                <p class="text-sm font-mono text-brand-400">/api/v1/sentimiento</p>
+                                <p class="text-xs text-surface-500">POST • 856 req</p>
+                            </div>
+                            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        </div>
+                        <div class="flex items-center justify-between p-3 bg-surface-950 rounded-lg">
+                            <div>
+                                <p class="text-sm font-mono text-brand-400">/api/v1/emails</p>
+                                <p class="text-xs text-surface-500">POST • 2,103 req</p>
+                            </div>
+                            <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                        </div>
+                    </div>
+                    <div class="p-4 bg-surface-950 rounded-xl border border-surface-800">
+                        <p class="text-xs text-surface-500 mb-1">Base URL</p>
+                        <p class="text-sm font-mono text-surface-200">api.promptforge.ai/v1</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Generated Code -->
+            <div id="apiCodeSection" class="bg-surface-900 border border-surface-800 rounded-2xl overflow-hidden">
+                <div class="flex items-center justify-between p-4 border-b border-surface-800 flex-wrap gap-2">
+                    <div class="flex items-center gap-2">
+                        <button class="api-tab px-3 py-1.5 text-xs font-medium bg-brand-600 text-white rounded-lg" onclick="switchApiTab('curl', this)">cURL</button>
+                        <button class="api-tab px-3 py-1.5 text-xs font-medium bg-surface-800 text-surface-400 rounded-lg hover:bg-surface-700" onclick="switchApiTab('python', this)">Python</button>
+                        <button class="api-tab px-3 py-1.5 text-xs font-medium bg-surface-800 text-surface-400 rounded-lg hover:bg-surface-700" onclick="switchApiTab('node', this)">Node.js</button>
+                        <button class="api-tab px-3 py-1.5 text-xs font-medium bg-surface-800 text-surface-400 rounded-lg hover:bg-surface-700" onclick="switchApiTab('javascript', this)">JavaScript</button>
+                    </div>
+                    <button onclick="copyCode()" class="px-3 py-1.5 bg-surface-800 hover:bg-surface-700 text-surface-300 text-xs rounded-lg flex items-center gap-1 transition-all">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                        Copiar
+                    </button>
+                </div>
+                <div class="p-4 md:p-6">
+                    <pre id="codeContent" class="text-sm code-font text-surface-300 overflow-x-auto whitespace-pre-wrap"></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Models & BYOK Page -->
+        <div id="page-models" class="page-content p-4 md:p-8 hidden fade-in">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h2 class="text-xl font-bold text-white">Modelos & BYOK</h2>
+                    <p class="text-sm text-surface-500 mt-1">Bring Your Own Key — Conecta tus proveedores de IA</p>
+                </div>
+                <button onclick="openAddKeyModal()" class="btn-primary px-4 py-2 rounded-lg text-sm font-medium text-white flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                    Añadir API Key
+                </button>
+            </div>
+
+            <!-- BYOK Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <!-- OpenAI -->
+                <div class="bg-surface-900 border border-surface-800 rounded-2xl p-6 hover:border-brand-500/30 transition-all">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                                <svg class="w-7 h-7 text-emerald-400" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-white">OpenAI</h3>
+                                <p class="text-xs text-surface-500">GPT-4, GPT-3.5, DALL-E</p>
+                            </div>
+                        </div>
+                        <span class="px-2 py-1 bg-emerald-500/10 text-emerald-400 text-xs rounded-full border border-emerald-500/20">● Conectado</span>
+                    </div>
+                    <div class="space-y-2 mb-4">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-surface-500">Key</span>
+                            <span class="text-surface-300 font-mono">sk-***a8f2</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-surface-500">Uso</span>
+                            <span class="text-surface-300">1,847 / 10K</span>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button class="flex-1 py-1.5 bg-surface-800 hover:bg-surface-700 text-surface-300 text-xs rounded-lg transition-all">Editar</button>
+                        <button class="flex-1 py-1.5 bg-surface-800 hover:bg-surface-700 text-surface-300 text-xs rounded-lg transition-all">Test</button>
+                    </div>
+                </div>
+
+                <!-- Anthropic -->
+                <div class="bg-surface-900 border border-surface-800 rounded-2xl p-6 hover:border-brand-500/30 transition-all">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                                <svg class="w-7 h-7 text-amber-400" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-white">Anthropic</h3>
+                                <p class="text-xs text-surface-500">Claude 3.5, Claude 3</p>
+                            </div>
+                        </div>
+                        <span class="px-2 py-1 bg-emerald-500/10 text-emerald-400 text-xs rounded-full border border-emerald-500/20">● Conectado</span>
+                    </div>
+                    <div class="space-y-2 mb-4">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-surface-500">Key</span>
+                            <span class="text-surface-300 font-mono">sk-ant-***7b3c</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-surface-500">Uso</span>
+                            <span class="text-surface-300">1,042 / 10K</span>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button class="flex-1 py-1.5 bg-surface-800 hover:bg-surface-700 text-surface-300 text-xs rounded-lg transition-all">Editar</button>
+                        <button class="flex-1 py-1.5 bg-surface-800 hover:bg-surface-700 text-surface-300 text-xs rounded-lg transition-all">Test</button>
+                    </div>
+                </div>
+
+                <!-- Add New -->
+                <div class="bg-surface-900 border border-dashed border-surface-700 rounded-2xl p-6 flex flex-col items-center justify-center cursor-pointer hover:border-brand-500/50 transition-all" onclick="openAddKeyModal()">
+                    <div class="w-12 h-12 rounded-xl bg-surface-800 flex items-center justify-center mb-3">
+                        <svg class="w-6 h-6 text-surface-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                    </div>
+                    <h3 class="text-sm font-medium text-surface-400 mb-1">Añadir Proveedor</h3>
+                    <p class="text-xs text-surface-600">OpenAI, Anthropic, Google, Mistral...</p>
+                </div>
+            </div>
+
+            <!-- Model Router -->
+            <div class="bg-surface-900 border border-surface-800 rounded-2xl p-6">
+                <h3 class="text-lg font-semibold text-white mb-4">Model Router & Fallback</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="text-left text-xs text-surface-500 uppercase tracking-wider border-b border-surface-800">
+                                <th class="pb-3 pr-4">Prompt</th>
+                                <th class="pb-3 pr-4">Modelo Principal</th>
+                                <th class="pb-3 pr-4">Fallback 1</th>
+                                <th class="pb-3 pr-4">Fallback 2</th>
+                                <th class="pb-3">Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-sm">
+                            <tr class="border-b border-surface-800/50">
+                                <td class="py-3 pr-4 font-mono text-brand-400">soporte-respuestas</td>
+                                <td class="py-3 pr-4"><span class="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 text-xs rounded">GPT-4 Turbo</span></td>
+                                <td class="py-3 pr-4"><span class="px-2 py-0.5 bg-amber-500/10 text-amber-400 text-xs rounded">Claude 3.5</span></td>
+                                <td class="py-3 pr-4"><span class="px-2 py-0.5 bg-surface-700 text-surface-400 text-xs rounded">Llama 3.1</span></td>
+                                <td class="py-3"><span class="text-emerald-400">● Activo</span></td>
+                            </tr>
+                            <tr class="border-b border-surface-800/50">
+                                <td class="py-3 pr-4 font-mono text-brand-400">analizar-sentimiento</td>
+                                <td class="py-3 pr-4"><span class="px-2 py-0.5 bg-amber-500/10 text-amber-400 text-xs rounded">Claude 3.5</span></td>
+                                <td class="py-3 pr-4"><span class="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 text-xs rounded">GPT-4 Turbo</span></td>
+                                <td class="py-3 pr-4">—</td>
+                                <td class="py-3"><span class="text-emerald-400">● Activo</span></td>
+                            </tr>
+                            <tr>
+                                <td class="py-3 pr-4 font-mono text-brand-400">generar-email</td>
+                                <td class="py-3 pr-4"><span class="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 text-xs rounded">GPT-4 Turbo</span></td>
+                                <td class="py-3 pr-4"><span class="px-2 py-0.5 bg-purple-500/10 text-purple-400 text-xs rounded">Mistral Large</span></td>
+                                <td class="py-3 pr-4"><span class="px-2 py-0.5 bg-surface-700 text-surface-400 text-xs rounded">Llama 3.1</span></td>
+                                <td class="py-3"><span class="text-emerald-400">● Activo</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Key Modal -->
+        <div id="addKeyModal" class="fixed inset-0 z-50 hidden">
+            <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeAddKeyModal()"></div>
+            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-surface-900 border border-surface-700 rounded-2xl p-6 mx-4 slide-in">
+                <h3 class="text-lg font-bold text-white mb-4">Añadir API Key</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-sm text-surface-400 mb-1 block">Proveedor</label>
+                        <select class="w-full bg-surface-950 border border-surface-700 rounded-lg px-4 py-2.5 text-sm text-surface-200 focus:border-brand-500" id="keyProvider">
+                            <option>OpenAI</option>
+                            <option>Anthropic</option>
+                            <option>Google AI</option>
+                            <option>Mistral AI</option>
+                            <option>Groq</option>
+                            <option>Ollama (self-hosted)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-sm text-surface-400 mb-1 block">API Key</label>
+                        <input type="password" placeholder="sk-..." class="w-full bg-surface-950 border border-surface-700 rounded-lg px-4 py-2.5 text-sm text-surface-200 code-font focus:border-brand-500" id="keyValue">
+                    </div>
+                    <div>
+                        <label class="text-sm text-surface-400 mb-1 block">Nombre (opcional)</label>
+                        <input type="text" placeholder="Mi clave OpenAI" class="w-full bg-surface-950 border border-surface-700 rounded-lg px-4 py-2.5 text-sm text-surface-200 focus:border-brand-500">
+                    </div>
+                    <div class="p-3 bg-amber-500/5 border border-amber-500/20 rounded-lg">
+                        <p class="text-xs text-amber-400">🔒 Las claves se almacenan cifradas con AES-256. Nunca se comparten ni se registran en logs.</p>
+                    </div>
+                    <div class="flex gap-3 pt-2">
+                        <button onclick="closeAddKeyModal()" class="flex-1 py-2.5 bg-surface-800 hover:bg-surface-700 text-surface-300 text-sm rounded-lg transition-all">Cancelar</button>
+                        <button onclick="saveApiKey()" class="btn-primary flex-1 py-2.5 text-white text-sm rounded-lg font-medium">Guardar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analytics Page -->
+        <div id="page-analytics" class="page-content p-4 md:p-8 hidden fade-in">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h2 class="text-xl font-bold text-white">Analíticas</h2>
+                    <p class="text-sm text-surface-500 mt-1">Métricas detalladas de uso, costo y rendimiento</p>
+                </div>
+                <div class="flex gap-2">
+                    <select class="bg-surface-900 border border-surface-800 rounded-lg px-3 py-2 text-sm text-surface-300">
+                        <option>Últimos 7 días</option>
+                        <option>Últimos 30 días</option>
+                        <option>Este mes</option>
+                    </select>
+                    <button class="px-3 py-2 bg-surface-800 hover:bg-surface-700 text-surface-300 text-sm rounded-lg flex items-center gap-1 transition-all">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        <span class="hidden sm:inline">Exportar</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <!-- Cost Chart -->
+                <div class="bg-surface-900 border border-surface-800 rounded-2xl p-6">
+                    <h3 class="text-lg font-semibold text-white mb-4">Costo por Día (€)</h3>
+                    <canvas id="costChart" height="180"></canvas>
+                </div>
+                <!-- Latency Chart -->
+                <div class="bg-surface-900 border border-surface-800 rounded-2xl p-6">
+                    <h3 class="text-lg font-semibold text-white mb-4">Latencia (ms)</h3>
+                    <canvas id="latencyChart" height="180"></canvas>
+                </div>
+            </div>
+
+            <!-- Usage by Prompt -->
+            <div class="bg-surface-900 border border-surface-800 rounded-2xl p-6 overflow-x-auto">
+                <h3 class="text-lg font-semibold text-white mb-4">Uso por Prompt</h3>
+                <table class="w-full">
+                    <thead>
+                        <tr class="text-left text-xs text-surface-500 uppercase tracking-wider border-b border-surface-800">
+                            <th class="pb-3 pr-4">Prompt</th>
+                            <th class="pb-3 pr-4">Requests</th>
+                            <th class="pb-3 pr-4">Tokens (input/output)</th>
+                            <th class="pb-3 pr-4">Costo</th>
+                            <th class="pb-3 pr-4">Latencia Media</th>
+                            <th class="pb-3">Tasa de Error</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-sm">
+                        <tr class="border-b border-surface-800/50 hover:bg-surface-800/30">
+                            <td class="py-3 pr-4 font-mono text-brand-400">generar-email</td>
+                            <td class="py-3 pr-4">2,103</td>
+                            <td class="py-3 pr-4 text-surface-400">4.2M / 1.8M</td>
+                            <td class="py-3 pr-4 text-surface-300">€5.82</td>
+                            <td class="py-3 pr-4 text-surface-400">312ms</td>
+                            <td class="py-3"><span class="text-emerald-400">0.1%</span></td>
+                        </tr>
+                        <tr class="border-b border-surface-800/50 hover:bg-surface-800/30">
+                            <td class="py-3 pr-4 font-mono text-brand-400">soporte-respuestas</td>
+                            <td class="py-3 pr-4">1,247</td>
+                            <td class="py-3 pr-4 text-surface-400">2.8M / 1.1M</td>
+                            <td class="py-3 pr-4 text-surface-300">€4.15</td>
+                            <td class="py-3 pr-4 text-surface-400">234ms</td>
+                            <td class="py-3"><span class="text-emerald-400">0.0%</span></td>
+                        </tr>
+                        <tr class="border-b border-surface-800/50 hover:bg-surface-800/30">
+                            <td class="py-3 pr-4 font-mono text-brand-400">analizar-sentimiento</td>
+                            <td class="py-3 pr-4">856</td>
+                            <td class="py-3 pr-4 text-surface-400">1.2M / 0.4M</td>
+                            <td class="py-3 pr-4 text-surface-300">€1.87</td>
+                            <td class="py-3 pr-4 text-surface-400">156ms</td>
+                            <td class="py-3"><span class="text-amber-400">0.3%</span></td>
+                        </tr>
+                        <tr class="hover:bg-surface-800/30">
+                            <td class="py-3 pr-4 font-mono text-brand-400">resumir-documento</td>
+                            <td class="py-3 pr-4">432</td>
+                            <td class="py-3 pr-4 text-surface-400">3.1M / 0.9M</td>
+                            <td class="py-3 pr-4 text-surface-300">€3.56</td>
+                            <td class="py-3 pr-4 text-surface-400">489ms</td>
+                            <td class="py-3"><span class="text-emerald-400">0.0%</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Team Page -->
+        <div id="page-team" class="page-content p-4 md:p-8 hidden fade-in">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h2 class="text-xl font-bold text-white">Equipo</h2>
+                    <p class="text-sm text-surface-500 mt-1">Gestiona miembros, roles y permisos</p>
+                </div>
+                <button class="btn-primary px-4 py-2 rounded-lg text-sm font-medium text-white flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+                    <span class="hidden sm:inline">Invitar Miembro</span>
+                </button>
+            </div>
+
+            <div class="bg-surface-900 border border-surface-800 rounded-2xl p-6 overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="text-left text-xs text-surface-500 uppercase tracking-wider border-b border-surface-800">
+                            <th class="pb-3 pr-4">Miembro</th>
+                            <th class="pb-3 pr-4">Rol</th>
+                            <th class="pb-3 pr-4">Último Acceso</th>
+                            <th class="pb-3 pr-4">Prompts Creados</th>
+                            <th class="pb-3">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-sm">
+                        <tr class="border-b border-surface-800/50">
+                            <td class="py-3 pr-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center text-xs font-bold text-white">JD</div>
+                                    <div>
+                                        <p class="font-medium text-white">Juan Díaz</p>
+                                        <p class="text-xs text-surface-500">juan@empresa.com</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="py-3 pr-4"><span class="px-2 py-0.5 bg-brand-500/10 text-brand-400 text-xs rounded-full">Admin</span></td>
+                            <td class="py-3 pr-4 text-surface-400">Ahora</td>
+                            <td class="py-3 pr-4 text-surface-400">12</td>
+                            <td class="py-3"><button class="text-surface-500 hover:text-surface-300">Editar</button></td>
+                        </tr>
+                        <tr class="border-b border-surface-800/50">
+                            <td class="py-3 pr-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-xs font-bold text-white">ML</div>
+                                    <div>
+                                        <p class="font-medium text-white">María López</p>
+                                        <p class="text-xs text-surface-500">maria@empresa.com</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="py-3 pr-4"><span class="px-2 py-0.5 bg-purple-500/10 text-purple-400 text-xs rounded-full">Editor</span></td>
+                            <td class="py-3 pr-4 text-surface-400">Hace 2h</td>
+                            <td class="py-3 pr-4 text-surface-400">8</td>
+                            <td class="py-3"><button class="text-surface-500 hover:text-surface-300">Editar</button></td>
+                        </tr>
+                        <tr>
+                            <td class="py-3 pr-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-xs font-bold text-white">CR</div>
+                                    <div>
+                                        <p class="font-medium text-white">Carlos Ruiz</p>
+                                        <p class="text-xs text-surface-500">carlos@empresa.com</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="py-3 pr-4"><span class="px-2 py-0.5 bg-surface-700 text-surface-400 text-xs rounded-full">Viewer</span></td>
+                            <td class="py-3 pr-4 text-surface-400">Ayer</td>
+                            <td class="py-3 pr-4 text-surface-400">4</td>
+                            <td class="py-3"><button class="text-surface-500 hover:text-surface-300">Editar</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Settings Page -->
+        <div id="page-settings" class="page-content p-4 md:p-8 hidden fade-in">
+            <div class="mb-6">
+                <h2 class="text-xl font-bold text-white">Configuración</h2>
+                <p class="text-sm text-surface-500 mt-1">Ajustes generales de tu workspace</p>
+            </div>
+
+            <div class="space-y-6 max-w-2xl">
+                <div class="bg-surface-900 border border-surface-800 rounded-2xl p-6">
+                    <h3 class="text-lg font-semibold text-white mb-4">Workspace</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="text-sm text-surface-400 mb-1 block">Nombre del Workspace</label>
+                            <input type="text" value="TechCorp AI Lab" class="w-full bg-surface-950 border border-surface-700 rounded-lg px-4 py-2.5 text-sm text-surface-200 focus:border-brand-500">
+                        </div>
+                        <div>
+                            <label class="text-sm text-surface-400 mb-1 block">Región de Datos</label>
+                            <select class="w-full bg-surface-950 border border-surface-700 rounded-lg px-4 py-2.5 text-sm text-surface-200 focus:border-brand-500">
+                                <option>Europa (Frankfurt)</option>
+                                <option>Europa (Dublín)</option>
+                                <option>EE.UU. (Virginia)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-surface-900 border border-surface-800 rounded-2xl p-6">
+                    <h3 class="text-lg font-semibold text-white mb-4">Seguridad</h3>
+                    <div class="space-y-4">
+                        <label class="flex items-center justify-between cursor-pointer">
+                            <div>
+                                <p class="text-sm text-surface-200">Enmascaramiento de PII</p>
+                                <p class="text-xs text-surface-500">Detecta y ofusca datos personales antes de enviar a la IA</p>
+                            </div>
+                            <div class="w-11 h-6 bg-brand-600 rounded-full relative cursor-pointer">
+                                <div class="absolute right-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow"></div>
+                            </div>
+                        </label>
+                        <label class="flex items-center justify-between cursor-pointer">
+                            <div>
+                                <p class="text-sm text-surface-200">Prevención de Prompt Injection</p>
+                                <p class="text-xs text-surface-500">Bloquea intentos de manipulación de prompts</p>
+                            </div>
+                            <div class="w-11 h-6 bg-brand-600 rounded-full relative cursor-pointer">
+                                <div class="absolute right-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow"></div>
+                            </div>
+                        </label>
+                        <label class="flex items-center justify-between cursor-pointer">
+                            <div>
+                                <p class="text-sm text-surface-200">Auditoría Completa</p>
+                                <p class="text-xs text-surface-500">Registra todas las ejecuciones con hash criptográfico</p>
+                            </div>
+                            <div class="w-11 h-6 bg-surface-700 rounded-full relative cursor-pointer">
+                                <div class="absolute left-0.5 top-0.5 w-5 h-5 bg-surface-400 rounded-full shadow"></div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="bg-surface-900 border border-surface-800 rounded-2xl p-6">
+                    <h3 class="text-lg font-semibold text-white mb-4">Plan & Facturación</h3>
+                    <div class="p-4 bg-gradient-to-r from-brand-900/50 to-brand-800/30 rounded-xl border border-brand-700/30 mb-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-lg font-bold text-white">Plan Pro</p>
+                                <p class="text-sm text-surface-400">20€/mes • Facturación mensual</p>
+                            </div>
+                            <button class="px-4 py-2 bg-surface-800 hover:bg-surface-700 text-surface-300 text-sm rounded-lg transition-all">Cambiar Plan</button>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-4 text-center">
+                        <div class="p-3 bg-surface-950 rounded-lg">
+                            <p class="text-lg font-bold text-white">20€</p>
+                            <p class="text-xs text-surface-500">Precio/mes</p>
+                        </div>
+                        <div class="p-3 bg-surface-950 rounded-lg">
+                            <p class="text-lg font-bold text-white">10K</p>
+                            <p class="text-xs text-surface-500">Requests/mes</p>
+                        </div>
+                        <div class="p-3 bg-surface-950 rounded-lg">
+                            <p class="text-lg font-bold text-white">5</p>
+                            <p class="text-xs text-surface-500">Miembros</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-3">
+                    <button class="px-6 py-2.5 bg-surface-800 hover:bg-surface-700 text-surface-300 text-sm rounded-lg transition-all">Cancelar</button>
+                    <button onclick="showToast('Configuración guardada correctamente')" class="btn-primary px-6 py-2.5 text-white text-sm rounded-lg font-medium">Guardar Cambios</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Page Navigation
+        function switchPage(page, el) {
+            document.querySelectorAll('.page-content').forEach(p => p.classList.add('hidden'));
+            const targetPage = document.getElementById('page-' + page);
+            if (targetPage) targetPage.classList.remove('hidden');
+            document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+            if(el) el.classList.add('active');
+            
+            const titles = {
+                dashboard: 'Dashboard',
+                prompts: 'Editor de Prompts',
+                apigenerator: 'Generador de API',
+                models: 'Modelos & BYOK',
+                analytics: 'Analíticas',
+                team: 'Equipo',
+                settings: 'Configuración'
+            };
+            document.getElementById('pageTitle').textContent = titles[page] || page;
+
+            // Close mobile sidebar
+            document.querySelector('aside').classList.remove('open');
+
+            // Init charts if needed
+            if(page === 'dashboard') setTimeout(initDashboardCharts, 100);
+            if(page === 'analytics') setTimeout(initAnalyticsCharts, 100);
+            if(page === 'apigenerator') generateAPI();
+        }
+
+        // Prompt Editor
+        function openPromptEditor(name) {
+            document.getElementById('promptEditorModal').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+        function closePromptEditor() {
+            document.getElementById('promptEditorModal').classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+        function openNewPromptModal() {
+            document.getElementById('editorTitle').value = 'nuevo-prompt';
+            document.getElementById('systemPrompt').value = '';
+            openPromptEditor();
+        }
+        function addVariable() {
+            const list = document.getElementById('variablesList');
+            const div = document.createElement('div');
+            div.className = 'flex items-center gap-2';
+            div.innerHTML = `
+                <input type="text" value="" class="w-28 md:w-32 bg-surface-950 border border-surface-700 rounded-lg px-3 py-1.5 text-sm text-surface-200 code-font focus:border-brand-500" placeholder="nombre">
+                <input type="text" value="" class="flex-1 bg-surface-950 border border-surface-700 rounded-lg px-3 py-1.5 text-sm text-surface-200 focus:border-brand-500" placeholder="Valor por defecto">
+                <select class="bg-surface-800 border border-surface-700 rounded-lg px-2 py-1.5 text-xs text-surface-400 hidden sm:block">
+                    <option>string</option>
+                    <option>number</option>
+                    <option>boolean</option>
+                    <option>array</option>
+                </select>
+                <button onclick="this.parentElement.remove()" class="p-1 hover:bg-surface-800 rounded transition-all"><svg class="w-4 h-4 text-surface-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+            `;
+            list.appendChild(div);
+        }
+        function testPrompt() {
+            const btn = event.target.closest('button');
+            btn.innerHTML = `<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> <span class="hidden sm:inline">Ejecutando...</span>`;
+            setTimeout(() => {
+                btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> <span class="hidden sm:inline">Test</span>`;
+                document.getElementById('testResult').classList.remove('hidden');
+            }, 1500);
+        }
+        function savePrompt() {
+            showToast('Prompt guardado correctamente ✓');
+            closePromptEditor();
+        }
+
+        // API Generator
+        const apiCodeSnippets = {
+            curl: `curl -X POST https://api.promptforge.ai/v1/analizar-sentimiento \\
+  -H "Authorization: Bearer pf_sk_***4f2a" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "texto": "El producto es excelente, muy recomendado!",
+    "modelo": "claude-3.5-sonnet",
+    "metadata": {
+      "fuente": "reseñas-web",
+      "producto_id": "PRD-2847"
+    }
+  }'`,
+            python: `from promptforge import PromptForge
+
+client = PromptForge(api_key="pf_sk_***4f2a")
+
+response = client.prompts.execute(
+    endpoint="analizar-sentimiento",
+    data={
+        "texto": "El producto es excelente, muy recomendado!",
+        "metadata": {
+            "fuente": "reseñas-web",
+            "producto_id": "PRD-2847"
+        }
+    },
+    model="claude-3.5-sonnet"
+)
+
+print(f"Sentimiento: {response.sentiment}")
+print(f"Score: {response.score}")
+print(f"Confianza: {response.confidence}%")`,
+            node: `import { PromptForge } from '@promptforge/sdk';
+
+const client = new PromptForge({
+  apiKey: 'pf_sk_***4f2a'
+});
+
+const response = await client.prompts.execute({
+  endpoint: 'analizar-sentimiento',
+  data: {
+    texto: 'El producto es excelente, muy recomendado!',
+    metadata: {
+      fuente: 'reseñas-web',
+      producto_id: 'PRD-2847'
+    }
+  },
+  model: 'claude-3.5-sonnet'
+});
+
+console.log(\`Sentimiento: \${response.sentiment}\`);
+console.log(\`Score: \${response.score}\`);`,
+            javascript: `fetch('https://api.promptforge.ai/v1/analizar-sentimiento', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer pf_sk_***4f2a',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    texto: 'El producto es excelente, muy recomendado!',
+    modelo: 'claude-3.5-sonnet',
+    metadata: {
+      fuente: 'reseñas-web',
+      producto_id: 'PRD-2847'
+    }
+  })
+})
+.then(res => res.json())
+.then(data => {
+  console.log('Sentimiento:', data.sentiment);
+  console.log('Score:', data.score);
+  console.log('Confianza:', data.confidence + '%');
+});`
+        };
+
+        function generateAPI() {
+            const select = document.querySelector('#apiCodeSection .api-tab.bg-brand-600');
+            const lang = select ? select.textContent.toLowerCase() : 'curl';
+            document.getElementById('codeContent').textContent = apiCodeSnippets[lang] || apiCodeSnippets.curl;
+        }
+
+        function switchApiTab(lang, el) {
+            document.querySelectorAll('.api-tab').forEach(t => {
+                t.classList.remove('bg-brand-600', 'text-white');
+                t.classList.add('bg-surface-800', 'text-surface-400');
+            });
+            el.classList.remove('bg-surface-800', 'text-surface-400');
+            el.classList.add('bg-brand-600', 'text-white');
+            document.getElementById('codeContent').textContent = apiCodeSnippets[lang];
+        }
+
+        function copyCode() {
+            const code = document.getElementById('codeContent').textContent;
+            navigator.clipboard.writeText(code).then(() => showToast('Código copiado al portapapeles'));
+        }
+
+        // BYOK Modal
+        function openAddKeyModal() {
+            document.getElementById('addKeyModal').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+        function closeAddKeyModal() {
+            document.getElementById('addKeyModal').classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+        function saveApiKey() {
+            closeAddKeyModal();
+            showToast('API Key guardada y cifrada correctamente ✓');
+        }
+
+        // Toast
+        function showToast(message) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'toast bg-surface-800 border border-surface-700 text-surface-200 px-4 py-3 rounded-lg shadow-xl text-sm flex items-center gap-2';
+            toast.innerHTML = `<svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>${message}`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // Charts
+        function initDashboardCharts() {
+            const canvas = document.getElementById('tokensChart');
+            if(!canvas || canvas.width === 0) return;
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width = canvas.offsetWidth;
+            const h = canvas.height = 200;
+            ctx.clearRect(0, 0, w, h);
+
+            const data = [120, 180, 150, 220, 190, 280, 240];
+            const labels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+            const max = Math.max(...data) * 1.2;
+            const stepX = w / (data.length - 1);
+
+            // Gradient
+            const gradient = ctx.createLinearGradient(0, 0, 0, h);
+            gradient.addColorStop(0, 'rgba(99, 102, 241, 0.3)');
+            gradient.addColorStop(1, 'rgba(99, 102, 241, 0)');
+
+            // Area
+            ctx.beginPath();
+            ctx.moveTo(0, h);
+            data.forEach((v, i) => ctx.lineTo(i * stepX, h - (v / max) * h));
+            ctx.lineTo((data.length - 1) * stepX, h);
+            ctx.closePath();
+            ctx.fillStyle = gradient;
+            ctx.fill();
+
+            // Line
+            ctx.beginPath();
+            ctx.strokeStyle = '#6366f1';
+            ctx.lineWidth = 2;
+            ctx.lineJoin = 'round';
+            data.forEach((v, i) => {
+                const x = i * stepX;
+                const y = h - (v / max) * h;
+                i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+
+            // Dots & Labels
+            data.forEach((v, i) => {
+                const x = i * stepX;
+                const y = h - (v / max) * h;
+                ctx.beginPath();
+                ctx.arc(x, y, 4, 0, Math.PI * 2);
+                ctx.fillStyle = '#6366f1';
+                ctx.fill();
+                ctx.strokeStyle = '#0f172a';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                ctx.fillStyle = '#64748b';
+                ctx.font = '11px Inter, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(labels[i], x, h - 8);
+            });
+        }
+
+        function initAnalyticsCharts() {
+            // Cost Chart
+            const costCanvas = document.getElementById('costChart');
+            if(costCanvas && costCanvas.offsetWidth > 0) {
+                const ctx = costCanvas.getContext('2d');
+                const w = costCanvas.width = costCanvas.offsetWidth;
+                const h = costCanvas.height = 180;
+                ctx.clearRect(0, 0, w, h);
+
+                const data = [1.2, 1.8, 2.1, 1.5, 2.8, 1.9, 1.6];
+                const max = Math.max(...data) * 1.3;
+                const barW = (w / data.length) * 0.6;
+                const gap = w / data.length;
+
+                data.forEach((v, i) => {
+                    const x = i * gap + (gap - barW) / 2;
+                    const barH = (v / max) * (h - 30);
+                    const y = h - barH - 20;
+
+                    const grad = ctx.createLinearGradient(0, y, 0, h - 20);
+                    grad.addColorStop(0, '#6366f1');
+                    grad.addColorStop(1, '#312e81');
+                    ctx.fillStyle = grad;
+                    ctx.beginPath();
+                    ctx.roundRect(x, y, barW, barH, 4);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#64748b';
+                    ctx.font = '11px Inter, sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`€${v.toFixed(1)}`, x + barW / 2, y - 8);
+                });
+            }
+
+            // Latency Chart
+            const latCanvas = document.getElementById('latencyChart');
+            if(latCanvas && latCanvas.offsetWidth > 0) {
+                const ctx = latCanvas.getContext('2d');
+                const w = latCanvas.width = latCanvas.offsetWidth;
+                const h = latCanvas.height = 180;
+                ctx.clearRect(0, 0, w, h);
+
+                const data = [180, 220, 156, 190, 312, 234, 198];
+                const max = Math.max(...data) * 1.2;
+                const stepX = w / (data.length - 1);
+
+                const gradient = ctx.createLinearGradient(0, 0, 0, h);
+                gradient.addColorStop(0, 'rgba(16, 185, 129, 0.3)');
+                gradient.addColorStop(1, 'rgba(16, 185, 129, 0)');
+
+                ctx.beginPath();
+                ctx.moveTo(0, h);
+                data.forEach((v, i) => ctx.lineTo(i * stepX, h - (v / max) * h));
+                ctx.lineTo((data.length - 1) * stepX, h);
+                ctx.closePath();
+                ctx.fillStyle = gradient;
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.strokeStyle = '#10b981';
+                ctx.lineWidth = 2;
+                ctx.lineJoin = 'round';
+                data.forEach((v, i) => {
+                    i === 0 ? ctx.moveTo(i * stepX, h - (v / max) * h) : ctx.lineTo(i * stepX, h - (v / max) * h);
+                });
+                ctx.stroke();
+
+                data.forEach((v, i) => {
+                    const x = i * stepX;
+                    const y = h - (v / max) * h;
+                    ctx.beginPath();
+                    ctx.arc(x, y, 3, 0, Math.PI * 2);
+                    ctx.fillStyle = '#10b981';
+                    ctx.fill();
+                });
+            }
+        }
+
+        // Init
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(initDashboardCharts, 200);
+        });
+
+        // roundRect polyfill
+        if(!CanvasRenderingContext2D.prototype.roundRect) {
+            CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+                if(w < 2 * r) r = w / 2;
+                if(h < 2 * r) r = h / 2;
+                this.moveTo(x + r, y);
+                this.arcTo(x + w, y, x + w, y + h, r);
+                this.arcTo(x + w, y + h, x, y + h, r);
+                this.arcTo(x, y + h, x, y, r);
+                this.arcTo(x, y, x + w, y, r);
+                this.closePath();
+                return this;
+            };
+        }
+    </script>
+</body>
+</html>
+
